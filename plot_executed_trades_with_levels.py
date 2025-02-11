@@ -19,18 +19,6 @@ def plot_executed_trades_with_levels(data_df, trade_tracker, strategy, symbol):
     # Create figure
     fig = go.Figure()
 
-    # Add SMA trend line
-    sma_trend = pd.Series(strategy.sma_trend.array, index=data_df.index)
-    fig.add_trace(
-        go.Scatter(
-            x=data_df.index,
-            y=sma_trend,
-            mode='lines',
-            line=dict(color='white', width=1),
-            name=f'SMA {strategy.params.trend_period}'
-        )
-    )
-
     # Add candlestick chart
     fig.add_trace(
         go.Candlestick(

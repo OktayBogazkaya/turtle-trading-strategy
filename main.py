@@ -69,18 +69,14 @@ class TurtleStrategy(bt.Strategy):
     """
     Implementation of the Turtle Trading Strategy.
 
-    The strategy uses breakout levels, ATR for position sizing,
-    and trending indicators for trade decisions.
+    The strategy uses breakout levels and ATR for position sizing for trade decisions.
     """
     params = (
         ('period_high', 20),     # Breakout period high
         ('period_low', 10),      # Breakout period low
         ('atr_period', 14),      # ATR period
         ('risk_pct', 0.02),      # risk per trade
-        ('atr_multiplier', 2.5), # N-day ATR multiplier for stops
-        ('adx_period', 14),      # ADX period
-        ('adx_threshold', 0),    # ADX threshold for trend strength
-        ('trend_period', 50),    # Moving average trend filter
+        ('atr_multiplier', 2.5) # N-day ATR multiplier for stops
     )
 
     def __init__(self):
@@ -102,8 +98,6 @@ class TurtleStrategy(bt.Strategy):
         self.high_price = bt.indicators.Highest(self.data.high, period=self.params.period_high)
         self.low_price = bt.indicators.Lowest(self.data.low, period=self.params.period_low)
         self.atr = bt.indicators.ATR(self.data, period=self.params.atr_period, plotname='ATR')
-        self.adx = bt.indicators.DirectionalMovement(self.data, period=self.params.adx_period, plotname='ADX')
-        self.sma_trend = bt.indicators.SMA(self.data.close, period=self.params.trend_period)
 
     def log(self, txt, dt=None):
         """
@@ -241,9 +235,7 @@ class TurtleStrategy(bt.Strategy):
 
         if not self.position:
             # Check for buy conditions
-            if (self.data.close[0] > self.high_price[-1] and
-                self.data.close[0] > self.sma_trend[0] and
-                self.adx.adx[0] > self.params.adx_threshold):
+            if (self.data.close[0] > self.high_price[-1]):
 
                 shares = self.calculate_position_size(self.data.close[0])
 
@@ -272,12 +264,10 @@ class TurtleStrategy(bt.Strategy):
 
             # Check for sell conditions
             if (self.data.close[0] < self.stop_price or
-                self.data.close[0] < self.low_price[-1] or
-                self.data.close[0] < self.sma_trend[0]* (1 - 0.005)):
+                self.data.close[0] < self.low_price[-1]):
 
                 exit_reason = ("Trailing Stop" if self.data.close[0] < self.stop_price else
-                             "Low Breakout" if self.data.close[0] < self.low_price[-1] else
-                             "Trend Break")
+                             "Low Breakout")
 
                 self.log(f'SELL CREATE ({exit_reason}) | Price: {self.data.close[0]:.2f} | '
                         f'Stop: {self.stop_price:.2f} | '
@@ -359,9 +349,9 @@ def analyze_trades(strat):
     # Print Trade Analysis
     print("\n=== TRADE ANALYSIS ===")
     print(f"\nOverall Performance:")
-    print("Starting Portfolio Value: %.2f" % cerebro.broker.startingcash)
-    print("Ending Portfolio Value: %.2f" % cerebro.broker.getvalue())
-    print('Annualized Return: %.2f%%' % (strat.analyzers.returns.get_analysis()['rnorm100']))
+    print(f"Starting Portfolio Value: {cerebro.broker.startingcash:.2f}")
+    print(f"Ending Portfolio Value: {cerebro.broker.getvalue():.2f}")
+    print(f"Annualized Return: {strat.analyzers.returns.get_analysis()['rnorm100']:.2f}%")
     print(f"Annual Returns: {annual_returns_df}")
     print('Sharpe Ratio:', sharpe_ratio)
     print(f"Max Drawdown: {max_drawdown:.2f}%")
@@ -394,49 +384,35 @@ def get_data(symbol, start_date, end_date):
 
     return data_df
 
-# Select ticker and date range
-st.sidebar.title('Basic Settings')
-
-symbol = st.sidebar.text_input('Enter Stock Symbol', value='NVDA')
-initial_cash = st.sidebar.number_input('Initial Cash', value=100000.0, step=1000.0)
-start_date = st.sidebar.date_input('Start Date', value=pd.to_datetime('2020-01-01'))
-end_date = st.sidebar.date_input('End Date', value=pd.to_datetime('2024-12-31'))
-
-# Add About section to sidebar
-st.sidebar.markdown("""
----
-### About Turtle Trading
-The Turtle Trading strategy was famously created in 1983 when Richard Dennis made a bet that he could teach anyone to trade successfully. 
-The strategy uses trend-following rules, position sizing based on volatility, and systematic risk management to capture large market moves. 
-For more, please visit [Macro-Ops](https://macro-ops.com/richard-dennis-turtle-trading-strategy-explained/).
-""")
-
-# Add footer to sidebar
-st.sidebar.markdown("""
----
-Made with ❤️ by [RhinoInsight](https://twitter.com/rhinoinsight)
-""")
-
 # Main page title
-st.title('Turtle Trading Strategy Backtester')
+st.title('Turtle Trading Strategy')
+
+# Basic settings in the main page
+st.header('Basic Settings')
+
+# Display key metrics
+col1, col2 = st.columns(2)
+with col1:
+    symbol = st.text_input('Enter Stock Symbol', value='NVDA')
+    start_date = st.date_input('Start Date', value=pd.to_datetime('2020-01-01'))
+with col2:
+    initial_cash = st.number_input('Initial Cash', value=100000.0, step=1000.0)
+    end_date = st.date_input('End Date', value=pd.to_datetime('2024-12-31'))
 
 # Strategy parameters in main page
-st.header('Strategy Parameters')
+st.header('Trading Parameters')
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
     period_high = st.number_input('Breakout Period High', value=20, help='Number of days for breakout high calculation')
     atr_period = st.number_input('ATR Period', value=14, help='Average True Range calculation period')
-    adx_period = st.number_input('ADX Period', value=14, help='Average Directional Index calculation period')
 
 with col2:
     period_low = st.number_input('Breakout Period Low', value=10, help='Number of days for breakout low calculation')
     risk_pct = st.number_input('Risk Percentage', value=0.02, format="%.3f", help='Risk per trade as decimal (0.02 = 2%)')
-    adx_threshold = st.number_input('ADX Threshold', value=0, help='Minimum ADX value for trade entry')
 
 with col3:
-    trend_period = st.number_input('Trend Period', value=50, help='Moving average period for trend filter')
     atr_multiplier = st.number_input('ATR Multiplier', value=2.5, help='Multiplier for ATR-based stops')
 
 # Convert dates to string format for yfinance
@@ -446,12 +422,9 @@ end_date = end_date.strftime('%Y-%m-%d')
 # Display results in Streamlit
 if st.button('Run Backtest'):
     with st.spinner('Running backtest...'):
-        data_df = get_data(symbol, start_date, end_date)
         
         # Initialize backtest
         cerebro = bt.Cerebro()
-        data = bt.feeds.PandasData(dataname=data_df)
-        cerebro.adddata(data)
         
         # Pass the UI parameters to the strategy
         cerebro.addstrategy(TurtleStrategy,
@@ -459,12 +432,19 @@ if st.button('Run Backtest'):
             period_low=period_low,
             atr_period=atr_period,
             risk_pct=risk_pct,
-            atr_multiplier=atr_multiplier,
-            adx_period=adx_period,
-            adx_threshold=adx_threshold,
-            trend_period=trend_period
+            atr_multiplier=atr_multiplier
         )
         
+        # Get data
+        data_df = get_data(symbol, start_date, end_date)
+
+        # Create Data Feed
+        data = bt.feeds.PandasData(dataname=data_df)
+
+        # Add Data Feed to Cerebro
+        cerebro.adddata(data)
+
+        # Set Initial cash start and commission
         cerebro.broker.setcash(initial_cash)
         cerebro.broker.setcommission(commission=0)
 
@@ -478,8 +458,11 @@ if st.button('Run Backtest'):
 
         # Run the backtest
         results = cerebro.run()
+
+        # Save results
         strat = results[0]
 
+        # Analyze trades
         analyze_trades(strat)
 
         # Display results in Streamlit
