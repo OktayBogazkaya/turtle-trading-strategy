@@ -2,6 +2,10 @@
 
 This project implements the Turtle Trading strategy using Backtrader and Streamlit. The strategy is a trend-following system that uses breakout levels and the Average True Range (ATR) for position sizing and trade decisions.
 
+The rules and parameters in this implementation are based on the original Turtle Trading rules, as documented in [this PDF](https://bigpicture.typepad.com/comments/files/turtlerules.pdf) by OriginalTurtles.org.
+
+**Note**: Currently, only the long strategy is implemented. The short logic, which is part of the traditional Richard Dennis strategy, has been disabled for now.
+
 ## Features
 
 - **Backtesting**: Simulate the Turtle Trading Strategy over different asset classes
