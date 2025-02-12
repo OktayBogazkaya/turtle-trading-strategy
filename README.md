@@ -4,7 +4,10 @@ This project implements the Turtle Trading strategy using Backtrader and Streaml
 
 The rules and parameters in this implementation are based on the original Turtle Trading rules, as documented in [this PDF](https://bigpicture.typepad.com/comments/files/turtlerules.pdf) by OriginalTurtles.org.
 
-**Note**: Currently, only the long strategy is implemented. The short logic, which is part of the traditional Richard Dennis strategy, has been disabled for now.
+**Note**:
+- Currently, only the long strategy is implemented. The short logic, which is part of the traditional Richard Dennis strategy, has been disabled for now.
+- Commission fees are also not included in the trade and return calculations but will be enabled soon.
+- Taxes, which vary by region, are also not part of the calculations and may further impact returns
 
 ## Features
 
