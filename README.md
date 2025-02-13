@@ -79,8 +79,8 @@ Some key benefits include:
 
 Below are a few example charts showcasing the strategy in action on TradingView:
 
-![XRPUSD](path/to/xrpusd_tradingview.png)
-![SHIBUSD](path/to/shibusd_tradingview.png)
+![XRPUSD](public/xrpusd_tradingview.png)
+![SHIBUSD](public/shibusd_tradingview.png)
 
 ## Contributing
 
