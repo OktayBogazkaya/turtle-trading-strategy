@@ -1,0 +1,77 @@
+// How to add the Pine Script Code to TradingView Chart?
+// 1. Open TradingView chart
+// 2. Click "Pine Editor" at the bottom
+// 3. Copy the code below and paste it in Pine Editor
+// 4. Click "Save" in Pine Editor
+// 5. Click "Add to Chart" in Pine Editor
+// Your indicator will now be displayed on the chart including buy and sell signals
+
+//@version=6
+strategy("TurtleStrategy_Crypto", overlay=true, initial_capital=100000)
+
+// Input parameters
+periodHigh = input.int(10, "Breakout Period High", minval=1)
+atrPeriod = input.int(14, "ATR Period", minval=1)
+atrMultiplier = input.float(1, "ATR Multiplier", minval=0.1)
+riskPct = input.float(2.0, "Risk Percentage", minval=0.1, maxval=100) / 100
+start_date = timestamp("2023-01-01")  // Default start date
+end_date = timestamp("2024-12-31")    // Default end date
+
+// Calculate indicators
+highestPrice = ta.highest(high, periodHigh)
+lowestPrice = ta.lowest(low, periodHigh)
+atr = ta.atr(atrPeriod)
+
+// Variables for position management
+var float stopPrice = na
+var float entryPrice = na
+var float highestPriceInTrade = na
+
+// Calculate position size based on risk
+calcPositionSize() =>
+    dollarVolatility = atr * atrMultiplier
+    dollarRisk = strategy.equity * riskPct
+    math.floor(dollarRisk / dollarVolatility)
+
+// Date range filter
+inDateRange = time >= start_date and time <= end_date
+
+// Entry conditions
+isLongEntry = (close > highestPrice[1]) and strategy.position_size == 0 and inDateRange
+
+// Exit conditions
+isLongExit = (close < stopPrice or close < lowestPrice[1]) and strategy.position_size > 0 and inDateRange
+
+// Update trailing stop
+if strategy.position_size > 0
+    highestPriceInTrade := math.max(highestPriceInTrade, close)
+    stopPrice := highestPriceInTrade - (atr * atrMultiplier)
+
+// Entry and exit execution
+if isLongEntry
+    posSize = calcPositionSize()
+    if posSize > 0
+        strategy.entry("Long", strategy.long, posSize)
+        entryPrice := close
+        highestPriceInTrade := close
+        stopPrice := close - (atr * atrMultiplier)
+        alert("Buy, Ticker:" + syminfo.ticker + 
+              ", Close: " + str.tostring(close) + 
+              ", Position Size: " + str.tostring(posSize))
+
+if isLongExit
+    strategy.close("Long")
+    highestPriceInTrade := na
+    stopPrice := na
+    entryPrice := na
+    alert("Sell, Ticker:" + syminfo.ticker + 
+          ", Close: " + str.tostring(close) + 
+          ", Position Size: " + str.tostring(strategy.position_size))
+
+plot(highestPrice, "High Channel", color = color.white)
+plot(lowestPrice, "Low Channel", color = color.white)
+plot(stopPrice, "Stop Price", color = color.yellow, style = plot.style_cross)
+
+// Plot entry/exit signals
+plotshape(isLongEntry ? low : na, "Entry", shape.triangleup, location.belowbar, color.green, size=size.small)
+plotshape(isLongExit ? high : na, "Exit", shape.triangledown, location.abovebar, color.red, size=size.small)
