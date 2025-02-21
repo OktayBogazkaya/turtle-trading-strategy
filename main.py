@@ -76,7 +76,8 @@ class TurtleStrategy(bt.Strategy):
         ('period_low', 10),      # Breakout period low
         ('atr_period', 14),      # ATR period
         ('risk_pct', 0.02),      # risk per trade
-        ('atr_multiplier', 2.5) # N-day ATR multiplier for stops
+        ('atr_multiplier', 2.5), # N-day ATR multiplier for stops
+        ('commission_fee', 0.01) # Commission fee
     )
 
     def __init__(self):
@@ -119,6 +120,7 @@ class TurtleStrategy(bt.Strategy):
         """
         Handle completed buy order execution and logging.
         """
+        
         # Store trade entry details
         self.buy_price = order.executed.price
         self.buy_comm = order.executed.comm
@@ -169,11 +171,13 @@ class TurtleStrategy(bt.Strategy):
 
         # Log trade exit
         self.log(f'SELL #{self.current_trade_id} EXECUTED | Price: {order.executed.price:.2f} | '
-                f'Size: {order.executed.size:.0f} | Cost: {order.executed.value:.2f} '
-                f'Comm: {order.executed.comm:.2f} |\n\nTrade P/L: {net_pnl:.2f} ({pnl_pct:.2f}%) | '
+                f'Size: {order.executed.size:.0f} | Cost: {order.executed.value:.2f} | '
+                f'Comm: {order.executed.comm:.2f}'
+                f'\n\nTrade P/L: {net_pnl:.2f} ({pnl_pct:.2f}%) | '
                 f'Entry: {self.buy_price:.2f} | Exit: {order.executed.price:.2f} | '
                 f'Size: {order.executed.size:.0f} | Total Commission: '
-                f'{(self.buy_comm + order.executed.comm):.2f} |\n\nHolding Period: {holding_days} days')
+                f'{(self.buy_comm + order.executed.comm):.2f} '
+                f'\n\nHolding Period: {holding_days} days')
 
         # Reset trade variables
         self._reset_trade_variables()
@@ -245,7 +249,7 @@ class TurtleStrategy(bt.Strategy):
                     risk_pct = (risk_amount / account_value) * 100
 
                     self.log(f'BUY CREATE | Price: {self.data.close[0]:.2f} | '
-                            f'Shares: {shares} | Risk Amount: {risk_amount:.2f} |'
+                            f'Shares: {shares} | Risk Amount: {risk_amount:.2f} '
                             f'({risk_pct:.2f}%)')
                     self.order = self.buy(size=shares)
 
@@ -377,8 +381,8 @@ def get_data(symbol, start_date, end_date):
     """
     data_df = yf.download(symbol, start=start_date, end=end_date)
   
-    data_df = data_df[['Open', 'High', 'Low', 'Close', 'Volume', 'Adj Close']].copy()
-    data_df.columns = ['open', 'high', 'low', 'close', 'volume', 'adj_close']  # Rename columns to lowercase
+    data_df = data_df[['Close', 'High', 'Low', 'Open', 'Volume']].copy()
+    data_df.columns = ['close', 'high', 'low', 'open', 'volume']  # Rename columns to lowercase
     data_df.dropna(inplace=True)  # Drop any rows with NaN values
     data_df.index = pd.to_datetime(data_df.index)  # Ensure index is datetime
 
@@ -410,10 +414,11 @@ with col1:
 
 with col2:
     period_low = st.number_input('Breakout Period Low', value=10, help='Number of days for breakout low calculation')
-    risk_pct = st.number_input('Risk Percentage', value=0.02, format="%.3f", help='Risk per trade as decimal (0.02 = 2%)')
+    risk_pct = st.number_input('Risk Percentage', value=0.02, help='Risk per trade as decimal (0.02 = 2%)')
 
 with col3:
     atr_multiplier = st.number_input('ATR Multiplier', value=2.5, help='Multiplier for ATR-based stops')
+    commission_fee = st.number_input("Commission Fee", min_value=0.000, step=1e-3, format="%.3f", help='Commission fee as decimal (0.01 = 1%)')
 
 # Convert dates to string format for yfinance
 start_date = start_date.strftime('%Y-%m-%d')
@@ -446,7 +451,7 @@ if st.button('Run Backtest'):
 
         # Set Initial cash start and commission
         cerebro.broker.setcash(initial_cash)
-        cerebro.broker.setcommission(commission=0)
+        cerebro.broker.setcommission(commission=commission_fee)
 
         # Add analyzers
         cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
@@ -550,4 +555,4 @@ if st.button('Run Backtest'):
             for log_entry in strat.log_entries:
                 st.text(log_entry)
                 if "Trade P/L:" in log_entry:
-                    st.text("-" * 80) 
+                    st.text("-" * 80)
