@@ -279,39 +279,12 @@ class TurtleStrategy(bt.Strategy):
 
                 self.order = self.sell(size=self.position.size)
 
-    def print_best_worst_trades(self):
-        """
-        Print best and worst trades analysis.
-        """
-        best_trade, worst_trade = self.trade_tracker.get_best_worst_trades()
-
-        print("\n=== BEST AND WORST TRADES ANALYSIS ===")
-        print("\nBEST TRADE:")
-        print(f"Entry Date: {best_trade['entry_date']}")
-        print(f"Exit Date: {best_trade['exit_date']}")
-        print(f"Holding Period: {best_trade['holding_days']} days")
-        print(f"Entry Price: ${best_trade['entry_price']:.2f}")
-        print(f"Exit Price: ${best_trade['exit_price']:.2f}")
-        print(f"Position Size: {best_trade['size']} shares")
-        print(f"Net P/L: ${best_trade['net_pnl']:.2f} ({best_trade['pnl_pct']:.2f}%)")
-        print(f"Total Commission: ${best_trade['total_commission']:.2f}")
-
-        print("\nWORST TRADE:")
-        print(f"Entry Date: {worst_trade['entry_date']}")
-        print(f"Exit Date: {worst_trade['exit_date']}")
-        print(f"Holding Period: {worst_trade['holding_days']} days")
-        print(f"Entry Price: ${worst_trade['entry_price']:.2f}")
-        print(f"Exit Price: ${worst_trade['exit_price']:.2f}")
-        print(f"Position Size: {worst_trade['size']} shares")
-        print(f"Net P/L: ${worst_trade['net_pnl']:.2f} ({worst_trade['pnl_pct']:.2f}%)")
-        print(f"Total Commission: ${worst_trade['total_commission']:.2f}")
-
 def analyze_trades(strat):
     """
     Analyze trade results and calculate metrics.
     """
-    global trade_analyzer, drawdown_analyzer, sharpe_ratio_analyzer
-    global closed_trades, open_trades, win_rate, avg_win_loss_ratio
+    global trade_analyzer, drawdown_analyzer
+    global closed_trades, open_trades, win_rate, avg_win_loss_ratio, expectancy, sharpe_ratio
 
     # Retrieve the trade analysis from the results
     trade_analyzer = strat.analyzers.trades.get_analysis()
@@ -321,8 +294,6 @@ def analyze_trades(strat):
     annual_returns = strat.analyzers.annualreturns.get_analysis()
     annual_returns_df = pd.DataFrame(list(annual_returns.items()), columns=["Year", "Total Return (%)"])
     annual_returns_df["Total Return (%)"] = annual_returns_df["Total Return (%)"] * 100
-
-    portfolio_values = results[0].analyzers.portfolio_values.values
 
     # Extract relevant data
     closed_trades = trade_analyzer['total']['closed']
@@ -337,11 +308,10 @@ def analyze_trades(strat):
     # Win rate
     win_rate = trade_analyzer['won']['total'] / closed_trades if closed_trades > 0 else 0
 
-    # Expectancy: (avg win * win rate) + (avg loss * loss rate)
+    # Expectancy: 
     avg_win = trade_analyzer['won']['pnl']['average']
     avg_loss = trade_analyzer['lost']['pnl']['average']
-    expectancy = (avg_win * (trade_analyzer['won']['total'] / closed_trades)) + \
-                (avg_loss * (trade_analyzer['lost']['total'] / closed_trades))
+    expectancy = (avg_win * win_rate) - (avg_loss * (1-win_rate))
 
     # Average Win/Loss ratio
     avg_win_loss_ratio = avg_win / abs(avg_loss) if avg_loss != 0 else np.nan
@@ -349,31 +319,6 @@ def analyze_trades(strat):
     # Long and Short trades count
     longs = trade_analyzer['long']['total']
     shorts = trade_analyzer['short']['total']
-
-    # Print Trade Analysis
-    print("\n=== TRADE ANALYSIS ===")
-    print(f"\nOverall Performance:")
-    print(f"Starting Portfolio Value: {cerebro.broker.startingcash:.2f}")
-    print(f"Ending Portfolio Value: {cerebro.broker.getvalue():.2f}")
-    print(f"Annualized Return: {strat.analyzers.returns.get_analysis()['rnorm100']:.2f}%")
-    print(f"Annual Returns: {annual_returns_df}")
-    print('Sharpe Ratio:', sharpe_ratio)
-    print(f"Max Drawdown: {max_drawdown:.2f}%")
-    print(f"Max Drawdown Length: {max_drawdown_len if max_drawdown_len is not None else 'N/A'}")
-
-    print(f"\nTrade Statistics:")
-    print(f"Total Closed Trades: {closed_trades}")
-    print(f"Open Trades: {open_trades}")
-
-    print(f"Expectancy: {expectancy:.2f}")
-
-    print(f"\nProfit Metrics:")
-    print(f"Avg Win: {avg_win:.2f}")
-    print(f"Avg Loss: {avg_loss:.2f}")
-    print(f"Avg Win / Avg Loss Ratio: {avg_win_loss_ratio:.2f}")
-    print(f"Win Rate: {win_rate:.2%}")
-    print(f"Long Trades: {longs}")
-    print(f"Short Trades: {shorts}")
 
 def get_data(symbol, start_date, end_date):
     """
@@ -462,7 +407,7 @@ if st.button('Run Backtest'):
         cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
 
         # Run the backtest
-        results = cerebro.run()
+        results = cerebro.run(stdstats=True)
 
         # Save results
         strat = results[0]
@@ -471,9 +416,9 @@ if st.button('Run Backtest'):
         analyze_trades(strat)
 
         # Display results in Streamlit
-        st.header('Backtest Results')
+        st.header("Backtest Results")
 
-        tab1, tab2, tab3, tab4 = st.tabs(['Performance Metrics', 'Best/Worst Trades', 'Equity Curve', 'Trade Chart'])
+        tab1, tab2, tab3, tab4 = st.tabs(['📏 Performance Metrics', '🔍 Best/Worst Trades', '📈 Equity Curve', '📊 Trade Chart'])
         
         with tab1:
             trade_analyzer = strat.analyzers.trades.get_analysis()
@@ -483,11 +428,12 @@ if st.button('Run Backtest'):
             # Display key metrics
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric('Starting Cash', f'${initial_cash:,.2f}')
-                st.metric('Sharpe Ratio', f"{sharpe_ratio_analyzer['sharperatio']:.2f}")
+                st.metric('Starting Cash', f"${initial_cash:,.2f}")
+                st.metric('Sharpe Ratio', f"{sharpe_ratio:.2f}")
                 st.metric('Closed Trades', f"{closed_trades}")
+                st.metric('Expectancy', f"${expectancy:,.2f}")
             with col2:
-                st.metric('Final Portfolio Value', f'${cerebro.broker.getvalue():,.2f}')
+                st.metric('Final Portfolio Value', f"${cerebro.broker.getvalue():,.2f}")
                 st.metric('Win Rate', f"{win_rate:.2%}")
                 st.metric('Open Trades', f"{open_trades}")
             with col3:
@@ -497,30 +443,40 @@ if st.button('Run Backtest'):
         
         with tab2:
             # Display best/worst trades
-            st.subheader('Best and Worst Trades')
+            st.subheader("Best and Worst Trades")
             best_trade, worst_trade = strat.trade_tracker.get_best_worst_trades()
-            
+
             if best_trade and worst_trade:
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.write("Best Trade")
-                    st.write(f"Entry Date: {best_trade['entry_date']}")
-                    st.write(f"Exit Date: {best_trade['exit_date']}")
-                    st.write(f"Holding Period: {best_trade['holding_days']} days")
-                    st.write(f"Net P/L: ${best_trade['net_pnl']:.2f}")
-                    st.write(f"Return: {best_trade['pnl_pct']:.2f}%")
-                
-                with col2:
-                    st.write("Worst Trade")
-                    st.write(f"Entry Date: {worst_trade['entry_date']}")
-                    st.write(f"Exit Date: {worst_trade['exit_date']}")
-                    st.write(f"Holding Period: {worst_trade['holding_days']} days")
-                    st.write(f"Net P/L: ${worst_trade['net_pnl']:.2f}")
-                    st.write(f"Return: {worst_trade['pnl_pct']:.2f}%")
+                # Create a DataFrame where metrics are rows
+                trades_data = pd.DataFrame({
+                    "": [
+                        "Entry Price ($)", "Entry Date", "Exit Price ($)", "Exit Date",
+                        "Holding Period (days)", "Total Commission ($)",
+                        "Net P/L ($)", "Return (%)"
+                    ],
+                    "Best Trade": [
+                        str(f"{best_trade['entry_price']:.2f}"), str(best_trade["entry_date"]),
+                        str(f"{best_trade['exit_price']:.2f}"), str(best_trade["exit_date"]),
+                        str(best_trade["holding_days"]),
+                        str(f"{best_trade['total_commission']:.2f}"),
+                        str(f"{best_trade['net_pnl']:.2f}"), str(f"{best_trade['pnl_pct']:.2f}")
+                    ],
+                    "Worst Trade": [
+                        str(f"{worst_trade['entry_price']:.2f}"), str(worst_trade["entry_date"]),
+                        str(f"{worst_trade['exit_price']:.2f}"), str(worst_trade["exit_date"]),
+                        str(worst_trade["holding_days"]),
+                        str(f"{worst_trade['total_commission']:.2f}"),
+                        str(f"{worst_trade['net_pnl']:.2f}"), str(f"{worst_trade['pnl_pct']:.2f}")
+                    ],
+                })
+
+                # Display as a table
+                st.table(trades_data)
+
         with tab3:
-            st.subheader('Equity Curve')
+            st.subheader("Equity Curve")
             # Display equity curve
-            portfolio_values = results[0].analyzers.portfolio_values.values
+            portfolio_values = strat.analyzers.portfolio_values.values
             dates = data_df.index[-len(portfolio_values):]
             
             fig_equity = go.Figure()
@@ -545,8 +501,9 @@ if st.button('Run Backtest'):
             
             st.plotly_chart(fig_equity, use_container_width=True)
 
+
         with tab4:
-            st.subheader('Trade Chart')
+            st.subheader("Trade Chart")
             fig = plot_executed_trades_with_levels(data_df, strat.trade_tracker, strat, symbol)
             st.plotly_chart(fig, use_container_width=True)
         
