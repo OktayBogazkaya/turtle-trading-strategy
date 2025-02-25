@@ -338,6 +338,7 @@ with col2:
 
 # Strategy parameters in main page
 st.header('Trading Parameters')
+st.info ('If you are curious about how to choose the optimal parameters for your trading strategy, check out my [Jupyter Notebook](turtle-strategy-analysis.ipynb) where I dive deeper into the details and share functions to automate and run optimizations for parameters across different asset classes.', icon="ℹ️")
 
 col1, col2, col3 = st.columns(3)
 
