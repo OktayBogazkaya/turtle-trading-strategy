@@ -51,20 +51,11 @@ The rules and parameters in this implementation are based on the original Turtle
 - **ATR Multiplier**: Multiplier for ATR-based stops
 - **Risk Percentage**: Risk per trade as a decimal (e.g., 0.02 for 2%)
 
-# Turtle Trading Strategy
+### Parameter Ooptimization
 
-This project implements the Turtle Trading Strategy using Backtrader and Streamlit. The strategy is a trend-following system that uses breakout levels and the Average True Range (ATR) for position sizing and trade decisions.
+In addition to the Streamlit app, I've also built a [Jupyter notebook](turtle-trading-analysis.ipynb) that will serve as my main space for exploring and refining ideas before integrating any new features into the Streamlit app.
 
-**Note**: Currently, only the long strategy is implemented. The short logic, which is part of the traditional Richard Dennis strategy, has been disabled for now.
-
-The rules and parameters used in this implementation are originally based on the Turtle Trading rules as documented in [this PDF](https://bigpicture.typepad.com/comments/files/turtlerules.pdf).
-
-## Features
-
-- **Backtesting**: Utilize Backtrader to simulate the Turtle Trading Strategy over historical data.
-- **Streamlit Interface**: A user-friendly web interface to input parameters and view results.
-- **Trade Analysis**: Analyze trades to determine best and worst trades, calculate performance metrics, and visualize results.
-- **Multi-Page Navigation**: Navigate between different sections of the app, including Home, Parameter Optimization, FAQ, and About.
+You can find the parameter optimization implementation, which runs a simple grid search to find the optimal parameters for a list of tickers/asset classes.
 
 ## TradingView Implementation
 
