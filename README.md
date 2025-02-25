@@ -53,7 +53,7 @@ The rules and parameters in this implementation are based on the original Turtle
 
 ### Parameter Ooptimization
 
-In addition to the Streamlit app, I've also built a [Jupyter notebook](turtle-trading-analysis.ipynb) that will serve as my main space for exploring and refining ideas before integrating any new features into the Streamlit app.
+In addition to the Streamlit app, I've also built a [Jupyter notebook](turtle-trading-strategy-analysis.ipynb) that will serve as my main space for exploring and refining ideas before integrating any new features into the Streamlit app.
 
 You can find the parameter optimization implementation, which runs a simple grid search to find the optimal parameters for a list of tickers/asset classes.
 
