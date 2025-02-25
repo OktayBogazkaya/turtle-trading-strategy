@@ -13,6 +13,7 @@ from functools import partial
 import streamlit as st
 
 from plot_executed_trades_with_levels import plot_executed_trades_with_levels
+from utils import get_data, plot_equity_curve
 
 class PortfolioValue(bt.Analyzer):
     """
@@ -284,7 +285,7 @@ def analyze_trades(strat):
     Analyze trade results and calculate metrics.
     """
     global trade_analyzer, drawdown_analyzer
-    global closed_trades, open_trades, win_rate, avg_win_loss_ratio, expectancy, sharpe_ratio
+    global closed_trades, open_trades, win_rate, avg_win_loss_ratio, expectancy, sharpe_ratio, max_drawdown, max_drawdown_len
 
     # Retrieve the trade analysis from the results
     trade_analyzer = strat.analyzers.trades.get_analysis()
@@ -319,19 +320,6 @@ def analyze_trades(strat):
     # Long and Short trades count
     longs = trade_analyzer['long']['total']
     shorts = trade_analyzer['short']['total']
-
-def get_data(symbol, start_date, end_date):
-    """
-    Fetch data from yfinance and prepare it for backtrader.
-    """
-    data_df = yf.download(symbol, start=start_date, end=end_date)
-  
-    data_df = data_df[['Close', 'High', 'Low', 'Open', 'Volume']].copy()
-    data_df.columns = ['close', 'high', 'low', 'open', 'volume']  # Rename columns to lowercase
-    data_df.dropna(inplace=True)  # Drop any rows with NaN values
-    data_df.index = pd.to_datetime(data_df.index)  # Ensure index is datetime
-
-    return data_df
 
 # Main page title
 st.title('Turtle Trading Strategy')
@@ -431,15 +419,16 @@ if st.button('Run Backtest'):
                 st.metric('Starting Cash', f"${initial_cash:,.2f}")
                 st.metric('Sharpe Ratio', f"{sharpe_ratio:.2f}")
                 st.metric('Closed Trades', f"{closed_trades}")
-                st.metric('Expectancy', f"${expectancy:,.2f}")
+                st.metric('Max Drawdown', f"{max_drawdown:.2f}%")
             with col2:
                 st.metric('Final Portfolio Value', f"${cerebro.broker.getvalue():,.2f}")
                 st.metric('Win Rate', f"{win_rate:.2%}")
                 st.metric('Open Trades', f"{open_trades}")
+                st.metric('Max Drawdown Length (days)',f"{max_drawdown_len}")
             with col3:
                 st.metric('Total Return', f"{((cerebro.broker.getvalue() - initial_cash) / initial_cash * 100):.2f}%")
                 st.metric('AvgWin/Loss Ratio', f"{avg_win_loss_ratio:.2f}")
-                st.metric('Max Drawdown', f"{drawdown_analyzer['max']['drawdown']:.2f}%")
+                st.metric('Expectancy', f"${expectancy:,.2f}")
         
         with tab2:
             # Display best/worst trades
@@ -499,6 +488,7 @@ if st.button('Run Backtest'):
                 template='plotly_white'
             )
             
+            fig_equity = plot_equity_curve(strat, data_df)
             st.plotly_chart(fig_equity, use_container_width=True)
 
 
